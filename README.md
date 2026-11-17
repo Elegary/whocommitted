@@ -1,113 +1,138 @@
 # whocommitted
 
-Extract every email address that ever committed to a git repository: authors,
-committers and `Co-authored-by` trailers, across **all branches and tags**.
+[![CI](https://github.com/Elegary/whocommitted/actions/workflows/ci.yml/badge.svg)](https://github.com/Elegary/whocommitted/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-`whocommitted` performs a metadata-only clone (`git clone --bare --filter=blob:none`)
-and reads the history with `git log --all`: no API rate limits, no per-commit HTTP
-requests, and it works with any git host.
+**Find every email address that ever committed to a git repository**, on all branches and tags, in a few seconds.
+
+![whocommitted demo](docs/demo.gif)
+
+- **Complete**: authors, committers and `Co-authored-by` trailers, across every branch and tag (optionally pull requests too).
+- **Fast**: downloads commit metadata only, never file contents. No API calls, no rate limits.
+- **Flexible**: sort, group by domain, filter bots and noreply addresses, export to JSON, CSV or text.
 
 ## Install
 
+Requires [uv](https://docs.astral.sh/uv/) and `git`.
+
 ```bash
-uv tool install git+https://github.com/<you>/whocommitted   # or: uvx --from . whocommitted
+uv tool install git+https://github.com/Elegary/whocommitted
 ```
 
-Requires `git` in `PATH`.
+Or run it once without installing:
+
+```bash
+uvx --from git+https://github.com/Elegary/whocommitted whocommitted extract octocat/Hello-World
+```
 
 ## Usage
 
 ```bash
-whocommitted extract octocat/Hello-World
-whocommitted extract https://github.com/psf/requests --format json | jq length
-whocommitted extract git@github.com:owner/repo.git -f csv -o emails.csv
-whocommitted extract owner/repo --no-bots --no-noreply --sort commits
-whocommitted extract owner/repo -s domain -s commits          # multi-key sort
-whocommitted extract owner/repo -s last-seen --reverse        # oldest activity first
-whocommitted extract owner/repo --group-by domain -s commits  # one section per domain
-whocommitted extract owner/repo --group-by kind               # bot / noreply / personal / organization
-whocommitted extract owner/repo --domain corp.io --domain corp.com -f txt
-whocommitted extract owner/repo --include-pulls     # also scan GitHub PR heads (forks)
-whocommitted extract https://gitlab.com/group/sub/project.git   # any git URL
-whocommitted extract ./local/checkout
-whocommitted providers
+whocommitted extract owner/repo
 ```
 
-Accepted repository specs:
+The repository can be given in many forms:
 
-| Spec | Provider |
+| You type | Works |
 | --- | --- |
-| `owner/repo`, `github:owner/repo` | GitHub |
-| `https://github.com/owner/repo[.git][/tree/...]`, `github.com/owner/repo` | GitHub |
-| `git@github.com:owner/repo.git`, `ssh://git@github.com/owner/repo` | GitHub |
-| any `https://`, `ssh://`, `git://`, `file://`, `user@host:path` URL or local path | generic git |
+| `owner/repo` | ✅ GitHub |
+| `https://github.com/owner/repo` (any page of it) | ✅ GitHub |
+| `git@github.com:owner/repo.git` | ✅ GitHub |
+| `https://gitlab.com/group/project.git`, any other git URL | ✅ any host |
+| `./path/to/local/repo` | ✅ local |
 
-### Sorting and grouping
-
-`--sort/-s` is repeatable, the first key being the primary one:
-`email` (default), `name`, `domain`, `commits`, `first-seen`, `last-seen`.
-`commits` and `last-seen` sort highest / most recent first, the others ascending;
-`--reverse/-r` flips everything. Email is always the final tie-breaker.
-
-`--group-by/-g` splits results into sections, each with its email and commit totals:
-`domain`, or `kind` (`bot`, `noreply`, `personal` webmail such as gmail.com,
-`organization` for any other domain). Groups are listed alphabetically when the
-primary sort key is `email`/`name`/`domain`, by total commits otherwise.
-Grouped JSON becomes `[{"group", "emails", "commits", "identities": [...]}]`,
-CSV gains a `group` column, TXT gets `# group (...)` headers.
-
-Output formats: `table` (default), `json`, `csv`, `txt` (`email<TAB>name`).
-Progress and errors go to stderr, results to stdout.
-
-Exit codes: `2` invalid spec, `3` git not found, `4` git command failed
-(repository missing, private, network…). Private repositories work with your
-usual git credentials (credential helper / SSH agent); prompts are disabled.
-
-## Architecture
-
-```
-src/whocommitted/
-  providers/   spec → RepoRef (clone URL). base.Provider / HostedProvider, github, generic
-  git.py       GitClient: bare partial clone, PR refs fetch, streamed `git log --all`
-  extractor.py log records → Commit → Identity (aggregated by lower-cased email)
-  filters.py   noreply / bot / domain predicates, kind classification
-  ordering.py  multi-key sorting and grouping (domain, kind)
-  output.py    table, json, csv, txt formatters
-  cli.py       Typer CLI
-```
-
-### Adding a provider (e.g. GitLab)
-
-```python
-class GitLabProvider(HostedProvider):
-    name = "gitlab"
-    description = "gitlab.com repositories"
-    host = "gitlab.com"
-
-    def split_path(self, segments: list[str]) -> tuple[str, str]:
-        # nested groups: group/sub/project[/-/tree/...]
-        if "-" in segments:
-            segments = segments[: segments.index("-")]
-        *groups, name = segments
-        return "/".join(groups), name
-```
-
-Register an instance in `PROVIDERS` (`src/whocommitted/providers/__init__.py`).
-Extraction is shared since it relies on git itself.
-
-## Development
+### Sort
 
 ```bash
-uv sync
-uv run pre-commit install        # ruff, mypy, conventional commit-msg hook
-uv run pytest --cov
-uv run ruff check . && uv run ruff format --check . && uv run mypy
+whocommitted extract owner/repo --sort commits          # most active first
+whocommitted extract owner/repo --sort last-seen        # most recently active first
+whocommitted extract owner/repo -s domain -s commits    # combine keys
+whocommitted extract owner/repo --sort name --reverse   # Z → A
 ```
 
-Commits follow [Conventional Commits](https://www.conventionalcommits.org/);
-[release-please](https://github.com/googleapis/release-please) derives versions
-and `CHANGELOG.md` from them on `main`.
+Keys: `email` (default), `name`, `domain`, `commits`, `first-seen`, `last-seen`.
+
+### Group
+
+```bash
+whocommitted extract owner/repo --group-by domain --sort commits
+whocommitted extract owner/repo --group-by kind
+```
+
+`kind` sorts addresses into `organization`, `personal` (gmail, outlook…), `noreply` and `bot`.
+
+### Filter
+
+```bash
+whocommitted extract owner/repo --no-bots --no-noreply
+whocommitted extract owner/repo --domain example.com
+whocommitted extract owner/repo --include-pulls         # also scan pull requests, including forks
+```
+
+### Export
+
+```bash
+whocommitted extract owner/repo -f json | jq '.[].email'
+whocommitted extract owner/repo -f csv -o emails.csv
+whocommitted extract owner/repo -f txt                  # email<TAB>name
+```
+
+Run `whocommitted extract --help` for every option.
+
+### Every repository of a user or organization
+
+[`scripts/owner-emails.sh`](scripts/owner-emails.sh) lists the repositories through the GitHub API,
+runs whocommitted on each one and merges the results by domain (needs `curl` and `jq`):
+
+```bash
+scripts/owner-emails.sh <user-or-org> --no-bots --no-noreply
+# → whocommitted-<user-or-org>/by-domain.txt and by-domain.json
+```
+
+Forks are skipped by default (`INCLUDE_FORKS=1` to keep them). Set `GITHUB_TOKEN` for large accounts.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["owner/repo<br/>or URL"] --> B["Provider<br/>(GitHub, generic git)"]
+    B --> C["git clone --bare<br/>--filter=blob:none"]
+    C --> D["git log --all"]
+    D --> E["Merge by email"]
+    E --> F["Sort · group · filter"]
+    F --> G["table · json · csv · txt"]
+```
+
+Instead of calling an API once per commit, whocommitted clones the repository **without file contents**
+into a temporary directory and reads the whole history in a single `git log --all`.
+The temporary clone is deleted when it finishes.
+
+Private repositories work with your usual git credentials (SSH key or credential helper).
+
+## Responsible use
+
+Commit metadata is public, but email addresses are personal data.
+Use whocommitted for legitimate purposes (auditing your own projects, attributing contributions,
+security research) and respect applicable privacy laws such as the GDPR. Do not use it for spam.
+
+## Contributing
+
+```bash
+git clone https://github.com/Elegary/whocommitted && cd whocommitted
+uv sync
+uv run pre-commit install
+uv run pytest
+```
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/);
+releases and the changelog are generated automatically.
+
+Adding a new host (GitLab, Bitbucket…) means adding one small class to
+[`src/whocommitted/providers/`](src/whocommitted/providers/): see [`github.py`](src/whocommitted/providers/github.py).
+
+To update the demo GIF: `vhs docs/demo.tape`.
 
 ## License
 
-MIT
+[MIT](LICENSE)
