@@ -130,3 +130,11 @@ def test_extract_limit(sample_repo: Path) -> None:
 def test_extract_limit_must_be_positive(sample_repo: Path) -> None:
     result = runner.invoke(app, ["extract", str(sample_repo), "--limit", "0"])
     assert result.exit_code == 2
+
+
+def test_extract_redact(sample_repo: Path) -> None:
+    result = runner.invoke(
+        app, ["extract", str(sample_repo), "-f", "txt", "-d", "corp.io", "--redact"]
+    )
+    assert result.exit_code == 0, result.output
+    assert result.stdout == "b*****b@corp.io\tB.\n"

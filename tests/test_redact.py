@@ -1,0 +1,50 @@
+from __future__ import annotations
+
+import pytest
+
+from whocommitted.models import Identity, Role
+from whocommitted.ordering import Group
+from whocommitted.redact import redact_email, redact_groups, redact_identity, redact_name
+
+
+@pytest.mark.parametrize(
+    ("email", "expected"),
+    [
+        ("dana.lane@example.com", "d*****e@example.com"),
+        ("ab@x.io", "a*****@x.io"),
+        ("a@x.io", "a*****@x.io"),
+        ("12345678+bob@users.noreply.github.com", "1*****b@users.noreply.github.com"),
+        ("no-at-sign", "n*****n"),
+    ],
+)
+def test_redact_email(email: str, expected: str) -> None:
+    assert redact_email(email) == expected
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [("Dana Lane", "D. L."), ("pjsmith", "p."), ("  Ana  ", "A."), ("", "")],
+)
+def test_redact_name(name: str, expected: str) -> None:
+    assert redact_name(name) == expected
+
+
+def test_redact_identity_merges_masked_names_and_keeps_stats() -> None:
+    identity = Identity(
+        email="david@x.io",
+        names={"Dana Lane": 2, "Dave Lee": 1},
+        roles={Role.AUTHOR},
+        commits={"a", "b"},
+    )
+    redacted = redact_identity(identity)
+    assert redacted.email == "d*****d@x.io"
+    assert redacted.domain == "x.io"
+    assert redacted.names == {"D. L.": 3}
+    assert redacted.commit_count == 2
+    assert identity.email == "david@x.io"  # original untouched
+
+
+def test_redact_groups_keeps_keys() -> None:
+    (group,) = redact_groups([Group("x.io", [Identity(email="bob@x.io")])])
+    assert group.key == "x.io"
+    assert group.identities[0].email == "b*****b@x.io"

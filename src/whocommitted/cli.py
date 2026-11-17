@@ -17,6 +17,7 @@ from whocommitted.git import GitClient
 from whocommitted.ordering import GroupBy, SortKey, group_identities, sort_identities
 from whocommitted.output import OutputFormat, render
 from whocommitted.providers import PROVIDERS, resolve
+from whocommitted.redact import redact_groups
 
 app = typer.Typer(
     help="Extract every email address that committed to a git repository.",
@@ -79,6 +80,12 @@ def extract_cmd(
             help="Group results by email domain or kind (bot, noreply, personal, organization).",
         ),
     ] = GroupBy.NONE,
+    redact: Annotated[
+        bool,
+        typer.Option(
+            "--redact", help="Mask emails and names (domains are kept), e.g. to share results."
+        ),
+    ] = False,
     limit: Annotated[
         int | None,
         typer.Option(
@@ -119,6 +126,8 @@ def extract_cmd(
     if limit is not None:
         identities = identities[:limit]
     groups = group_identities(identities, group_by, keys, reverse=reverse)
+    if redact:
+        groups = redact_groups(groups)
 
     if output is None:
         render(groups, fmt, sys.stdout)
