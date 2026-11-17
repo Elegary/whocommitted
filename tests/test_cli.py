@@ -117,3 +117,16 @@ def test_extract_multi_sort_reverse_txt(sample_repo: Path) -> None:
         "alice@example.com",
         "bob@corp.io",
     ]
+
+
+def test_extract_limit(sample_repo: Path) -> None:
+    result = runner.invoke(
+        app, ["extract", str(sample_repo), "-f", "txt", "-s", "commits", "-n", "1"]
+    )
+    assert result.exit_code == 0, result.output
+    assert result.stdout == "alice@example.com\tAlice\n"
+
+
+def test_extract_limit_must_be_positive(sample_repo: Path) -> None:
+    result = runner.invoke(app, ["extract", str(sample_repo), "--limit", "0"])
+    assert result.exit_code == 2

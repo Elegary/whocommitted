@@ -79,6 +79,15 @@ def extract_cmd(
             help="Group results by email domain or kind (bot, noreply, personal, organization).",
         ),
     ] = GroupBy.NONE,
+    limit: Annotated[
+        int | None,
+        typer.Option(
+            "--limit",
+            "-n",
+            min=1,
+            help="Keep only the first N emails (after filtering and sorting).",
+        ),
+    ] = None,
     include_pulls: Annotated[
         bool,
         typer.Option("--include-pulls", help="Also scan pull request heads (GitHub refs/pull/*)."),
@@ -107,6 +116,8 @@ def extract_cmd(
     filters = build_filters(no_noreply=no_noreply, no_bots=no_bots, domains=domains or ())
     keys = sort or [SortKey.EMAIL]
     identities = sort_identities(apply_filters(identities, filters), keys, reverse=reverse)
+    if limit is not None:
+        identities = identities[:limit]
     groups = group_identities(identities, group_by, keys, reverse=reverse)
 
     if output is None:
