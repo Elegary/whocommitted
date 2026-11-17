@@ -8,6 +8,8 @@
 
 ![whocommitted demo](docs/demo.gif)
 
+*Emails and names in this demo are masked with `--redact`.*
+
 - **Complete**: authors, committers and `Co-authored-by` trailers, across every branch and tag (optionally pull requests too).
 - **Fast**: downloads commit metadata only, never file contents. No API calls, no rate limits.
 - **Flexible**: sort, group by domain, filter bots and noreply addresses, export to JSON, CSV or text.
@@ -32,34 +34,6 @@ Or try it without installing anything:
 
 ```bash
 uvx --from git+https://github.com/Elegary/whocommitted whocommitted extract octocat/Hello-World
-```
-
-## Use cases
-
-**Who built a project?** Top contributors, without bots or noreply addresses:
-
-```bash
-whocommitted extract pallets/flask --sort commits --no-bots --no-noreply --limit 10
-```
-
-**Who maintains it today?** The most recently active people first:
-
-```bash
-whocommitted extract psf/requests --sort last-seen --no-bots --no-noreply --limit 8
-```
-
-**Which company is behind it?** Contributors from one email domain, on any git host:
-
-```bash
-whocommitted extract https://gitlab.com/gitlab-org/cli --domain gitlab.com --sort commits
-whocommitted extract astral-sh/uv --group-by domain --sort commits --no-bots --no-noreply
-```
-
-**Feed other tools.** Plain email list, JSON or CSV:
-
-```bash
-whocommitted extract pallets/click -f json --sort commits | jq -r '.[].email'
-whocommitted extract pallets/click -f csv -o click.csv
 ```
 
 ## Usage
@@ -115,6 +89,16 @@ whocommitted extract owner/repo -f csv -o emails.csv
 whocommitted extract owner/repo -f txt                  # email<TAB>name
 ```
 
+### Share results without exposing people
+
+```bash
+whocommitted extract owner/repo --redact     # d*****e@example.com · D. L.
+```
+
+`--redact` masks the local part of every email and shortens names to initials, in every format.
+Domains stay visible so grouping still works; keep in mind that a personal domain
+(`me@janedoe.dev`) can still identify someone.
+
 Run `whocommitted extract --help` for every option.
 
 ### Every repository of a user or organization
@@ -128,6 +112,36 @@ scripts/owner-emails.sh <user-or-org> --no-bots --no-noreply
 ```
 
 Forks are skipped by default (`INCLUDE_FORKS=1` to keep them). Set `GITHUB_TOKEN` for large accounts.
+
+## Use cases
+
+The demo above, step by step. Add `--redact` to mask the results, as in the GIF.
+
+**Who built a project?** Top contributors, without bots or noreply addresses:
+
+```bash
+whocommitted extract pallets/flask --sort commits --no-bots --no-noreply --limit 10
+```
+
+**Who maintains it today?** The most recently active people first:
+
+```bash
+whocommitted extract psf/requests --sort last-seen --no-bots --no-noreply --limit 8
+```
+
+**Which company is behind it?** Contributors from one email domain, on any git host:
+
+```bash
+whocommitted extract https://gitlab.com/gitlab-org/cli --domain gitlab.com --sort commits
+whocommitted extract astral-sh/uv --group-by domain --sort commits --no-bots --no-noreply
+```
+
+**Feed other tools.** Plain email list, JSON or CSV:
+
+```bash
+whocommitted extract pallets/click -f json --sort commits | jq -r '.[].email'
+whocommitted extract pallets/click -f csv -o click.csv
+```
 
 ## How it works
 
