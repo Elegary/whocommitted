@@ -7,10 +7,12 @@ Require jq
 Set Shell "bash"
 Set FontSize 16
 Set Width 1200
-Set Height 720
+Set Height 560
 Set Padding 20
 Set Theme "Catppuccin Mocha"
-Set TypingSpeed 40ms
+Set TypingSpeed 30ms
+Set WaitTimeout 60s
+Set WaitPattern /\$\s*$/
 
 Env PS1 "$ "
 Env BASH_SILENCE_DEPRECATION_WARNING "1"
@@ -18,20 +20,48 @@ Env BASH_SILENCE_DEPRECATION_WARNING "1"
 Hide
 Type "uv sync -q && export PATH=$PWD/.venv/bin:$PATH && clear"
 Enter
-Sleep 2s
+Wait
 Show
 
-Type "whocommitted extract octocat/Hello-World"
-Sleep 300ms
+# 1. Top contributors of a project
+Type "# Who built Flask? Top contributors, bots and noreply addresses excluded"
 Enter
+Type "whocommitted extract pallets/flask --sort commits --no-bots --no-noreply --limit 10"
+Enter
+Wait
 Sleep 4s
+Ctrl+L
 
-Type "whocommitted extract psf/requests --group-by kind --sort commits -f txt | grep '^#'"
-Sleep 300ms
+# 2. Who is still active
+Type "# Who maintains requests today? Most recent activity first"
 Enter
+Type "whocommitted extract psf/requests --sort last-seen --no-bots --no-noreply --limit 8"
+Enter
+Wait
+Sleep 4s
+Ctrl+L
+
+# 3. Any git host + company filter
+Type "# Any git host: which GitLab employees work on the GitLab CLI?"
+Enter
+Type "whocommitted extract https://gitlab.com/gitlab-org/cli --domain gitlab.com --no-bots --no-noreply -s commits -n 8"
+Enter
+Wait
+Sleep 4s
+Ctrl+L
+
+# 4. Scripting
+Type "# Script it: plain emails for your pipelines, CSV for spreadsheets"
+Enter
+Type `whocommitted extract pallets/click -f json --sort commits --no-noreply --limit 5 | jq -r '.[].email'`
+Enter
+Wait
+Sleep 1s
+Type "whocommitted extract pallets/click -f csv -o click.csv"
+Enter
+Wait
 Sleep 5s
 
-Type "whocommitted extract octocat/Hello-World -f json --sort commits | jq '.[0]'"
-Sleep 300ms
+Hide
+Type "rm -f click.csv"
 Enter
-Sleep 5s

@@ -14,16 +14,52 @@
 
 ## Install
 
-Requires [uv](https://docs.astral.sh/uv/) and `git`.
+Requires Python 3.11+ and `git`.
+
+With [uv](https://docs.astral.sh/uv/) (recommended):
 
 ```bash
 uv tool install git+https://github.com/Elegary/whocommitted
 ```
 
-Or run it once without installing:
+With pip:
+
+```bash
+pip install git+https://github.com/Elegary/whocommitted
+```
+
+Or try it without installing anything:
 
 ```bash
 uvx --from git+https://github.com/Elegary/whocommitted whocommitted extract octocat/Hello-World
+```
+
+## Use cases
+
+**Who built a project?** Top contributors, without bots or noreply addresses:
+
+```bash
+whocommitted extract pallets/flask --sort commits --no-bots --no-noreply --limit 10
+```
+
+**Who maintains it today?** The most recently active people first:
+
+```bash
+whocommitted extract psf/requests --sort last-seen --no-bots --no-noreply --limit 8
+```
+
+**Which company is behind it?** Contributors from one email domain, on any git host:
+
+```bash
+whocommitted extract https://gitlab.com/gitlab-org/cli --domain gitlab.com --sort commits
+whocommitted extract astral-sh/uv --group-by domain --sort commits --no-bots --no-noreply
+```
+
+**Feed other tools.** Plain email list, JSON or CSV:
+
+```bash
+whocommitted extract pallets/click -f json --sort commits | jq -r '.[].email'
+whocommitted extract pallets/click -f csv -o click.csv
 ```
 
 ## Usage
@@ -49,6 +85,7 @@ whocommitted extract owner/repo --sort commits          # most active first
 whocommitted extract owner/repo --sort last-seen        # most recently active first
 whocommitted extract owner/repo -s domain -s commits    # combine keys
 whocommitted extract owner/repo --sort name --reverse   # Z → A
+whocommitted extract owner/repo --sort commits --limit 20   # top 20 only
 ```
 
 Keys: `email` (default), `name`, `domain`, `commits`, `first-seen`, `last-seen`.
