@@ -32,6 +32,11 @@ dev = [
     "ruff>=0.17.5",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Elegary/whocommitted"
+Issues = "https://github.com/Elegary/whocommitted/issues"
+Changelog = "https://github.com/Elegary/whocommitted/blob/main/CHANGELOG.md"
+
 [project.scripts]
 whocommitted = "whocommitted.cli:app"
 

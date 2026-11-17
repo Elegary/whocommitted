@@ -11,3 +11,7 @@ build/
 coverage.xml
 htmlcov/
 .DS_Store
+
+# whocommitted output (contains personal data, never commit it)
+whocommitted-*/
+*.tsv
