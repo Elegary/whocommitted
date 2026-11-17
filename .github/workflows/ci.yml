@@ -24,6 +24,7 @@ jobs:
       - run: uv run ruff check --output-format=github .
       - run: uv run ruff format --check .
       - run: uv run mypy
+      - run: shellcheck scripts/*.sh
 
   test:
     name: test (${{ matrix.os }}, py${{ matrix.python }})
