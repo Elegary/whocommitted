@@ -3,21 +3,14 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from datetime import datetime
-from enum import StrEnum
 
 from whocommitted.git import FIELD_SEP, LOG_FIELDS, TRAILER_SEP, GitClient
 from whocommitted.models import Commit, Identity, RepoRef, Role, Signature
 
 _TRAILER_RE = re.compile(r"^\s*(?P<name>.*?)\s*<(?P<email>[^<>]*)>\s*$")
 _EXPECTED_FIELDS = len(LOG_FIELDS) + 1
-
-
-class SortKey(StrEnum):
-    EMAIL = "email"
-    NAME = "name"
-    COMMITS = "commits"
 
 
 def _parse_date(value: str) -> datetime | None:
@@ -69,17 +62,6 @@ def aggregate(commits: Iterable[Commit]) -> list[Identity]:
                 identity = identities[key] = Identity(email=key)
             identity.add(commit.sha, signature)
     return list(identities.values())
-
-
-_SORTERS: dict[SortKey, Callable[[Identity], tuple[object, ...]]] = {
-    SortKey.EMAIL: lambda i: (i.email,),
-    SortKey.NAME: lambda i: (i.name.lower(), i.email),
-    SortKey.COMMITS: lambda i: (-i.commit_count, i.email),
-}
-
-
-def sort_identities(identities: Iterable[Identity], key: SortKey) -> list[Identity]:
-    return sorted(identities, key=_SORTERS[key])
 
 
 def extract(

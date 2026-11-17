@@ -82,3 +82,38 @@ def test_python_m_entrypoint() -> None:
         check=True,
     )
     assert __version__ in result.stdout
+
+
+def test_extract_group_by_domain_sorted_by_commits(sample_repo: Path) -> None:
+    result = runner.invoke(
+        app, ["extract", str(sample_repo), "-f", "json", "-g", "domain", "-s", "commits"]
+    )
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.stdout)
+    assert data[0]["group"] == "example.com"
+    assert data[0]["commits"] == 2
+
+
+def test_extract_multi_sort_reverse_txt(sample_repo: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "extract",
+            str(sample_repo),
+            "-f",
+            "txt",
+            "--no-noreply",
+            "-s",
+            "domain",
+            "-s",
+            "name",
+            "-r",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert [line.split("\t")[0] for line in result.stdout.splitlines()] == [
+        "dave@tagged.org",
+        "carol@feature.dev",
+        "alice@example.com",
+        "bob@corp.io",
+    ]

@@ -65,6 +65,10 @@ class Identity:
         return max(self.names.items(), key=lambda item: (item[1], item[0]))[0]
 
     @property
+    def domain(self) -> str:
+        return self.email.rpartition("@")[2]
+
+    @property
     def commit_count(self) -> int:
         return len(self.commits)
 

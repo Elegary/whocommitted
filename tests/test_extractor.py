@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from whocommitted.extractor import SortKey, aggregate, parse_record, parse_trailer, sort_identities
+from whocommitted.extractor import aggregate, parse_record, parse_trailer
 from whocommitted.git import FIELD_SEP, TRAILER_SEP
 from whocommitted.models import Commit, Role, Signature
 
@@ -73,15 +73,3 @@ def test_aggregate_merges_case_insensitively_and_skips_empty() -> None:
     assert alice.roles == {Role.AUTHOR, Role.COMMITTER}
     assert alice.commit_count == 3
     assert (alice.first_seen, alice.last_seen) == (d1, d2)
-
-
-def test_sort_identities() -> None:
-    commits = [
-        Commit("1", (Signature("zed", "a@x.io", Role.AUTHOR),)),
-        Commit("2", (Signature("Amy", "b@x.io", Role.AUTHOR),)),
-        Commit("3", (Signature("Amy", "b@x.io", Role.AUTHOR),)),
-    ]
-    ids = aggregate(commits)
-    assert [i.email for i in sort_identities(ids, SortKey.EMAIL)] == ["a@x.io", "b@x.io"]
-    assert [i.email for i in sort_identities(ids, SortKey.NAME)] == ["b@x.io", "a@x.io"]
-    assert [i.email for i in sort_identities(ids, SortKey.COMMITS)] == ["b@x.io", "a@x.io"]

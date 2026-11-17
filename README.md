@@ -22,6 +22,10 @@ whocommitted extract octocat/Hello-World
 whocommitted extract https://github.com/psf/requests --format json | jq length
 whocommitted extract git@github.com:owner/repo.git -f csv -o emails.csv
 whocommitted extract owner/repo --no-bots --no-noreply --sort commits
+whocommitted extract owner/repo -s domain -s commits          # multi-key sort
+whocommitted extract owner/repo -s last-seen --reverse        # oldest activity first
+whocommitted extract owner/repo --group-by domain -s commits  # one section per domain
+whocommitted extract owner/repo --group-by kind               # bot / noreply / personal / organization
 whocommitted extract owner/repo --domain corp.io --domain corp.com -f txt
 whocommitted extract owner/repo --include-pulls     # also scan GitHub PR heads (forks)
 whocommitted extract https://gitlab.com/group/sub/project.git   # any git URL
@@ -38,6 +42,20 @@ Accepted repository specs:
 | `git@github.com:owner/repo.git`, `ssh://git@github.com/owner/repo` | GitHub |
 | any `https://`, `ssh://`, `git://`, `file://`, `user@host:path` URL or local path | generic git |
 
+### Sorting and grouping
+
+`--sort/-s` is repeatable, the first key being the primary one:
+`email` (default), `name`, `domain`, `commits`, `first-seen`, `last-seen`.
+`commits` and `last-seen` sort highest / most recent first, the others ascending;
+`--reverse/-r` flips everything. Email is always the final tie-breaker.
+
+`--group-by/-g` splits results into sections, each with its email and commit totals:
+`domain`, or `kind` (`bot`, `noreply`, `personal` webmail such as gmail.com,
+`organization` for any other domain). Groups are listed alphabetically when the
+primary sort key is `email`/`name`/`domain`, by total commits otherwise.
+Grouped JSON becomes `[{"group", "emails", "commits", "identities": [...]}]`,
+CSV gains a `group` column, TXT gets `# group (...)` headers.
+
 Output formats: `table` (default), `json`, `csv`, `txt` (`email<TAB>name`).
 Progress and errors go to stderr, results to stdout.
 
@@ -52,7 +70,8 @@ src/whocommitted/
   providers/   spec → RepoRef (clone URL). base.Provider / HostedProvider, github, generic
   git.py       GitClient: bare partial clone, PR refs fetch, streamed `git log --all`
   extractor.py log records → Commit → Identity (aggregated by lower-cased email)
-  filters.py   noreply / bot / domain predicates
+  filters.py   noreply / bot / domain predicates, kind classification
+  ordering.py  multi-key sorting and grouping (domain, kind)
   output.py    table, json, csv, txt formatters
   cli.py       Typer CLI
 ```

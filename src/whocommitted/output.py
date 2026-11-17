@@ -1,4 +1,8 @@
-"""Output formatters."""
+"""Output formatters.
+
+Every formatter receives a list of :class:`Group`. Ungrouped output is a single
+group whose ``key`` is ``None`` and is rendered flat.
+"""
 
 from __future__ import annotations
 
@@ -12,8 +16,9 @@ from rich.console import Console
 from rich.table import Table
 
 from whocommitted.models import Identity, Role
+from whocommitted.ordering import Group
 
-Formatter = Callable[[Sequence[Identity], TextIO], None]
+Formatter = Callable[[Sequence[Group], TextIO], None]
 
 _ROLE_ORDER = list(Role)
 
@@ -25,8 +30,16 @@ class OutputFormat(StrEnum):
     TXT = "txt"
 
 
+def _is_grouped(groups: Sequence[Group]) -> bool:
+    return any(group.key is not None for group in groups)
+
+
 def _roles(identity: Identity) -> list[str]:
     return [role.value for role in _ROLE_ORDER if role in identity.roles]
+
+
+def _summary(group: Group) -> str:
+    return f"{len(group.identities)} email(s), {group.commit_count} commit(s)"
 
 
 def to_dict(identity: Identity) -> dict[str, Any]:
@@ -34,6 +47,7 @@ def to_dict(identity: Identity) -> dict[str, Any]:
         "email": identity.email,
         "name": identity.name,
         "names": sorted(identity.names),
+        "domain": identity.domain,
         "roles": _roles(identity),
         "commits": identity.commit_count,
         "first_seen": identity.first_seen.isoformat() if identity.first_seen else None,
@@ -41,37 +55,70 @@ def to_dict(identity: Identity) -> dict[str, Any]:
     }
 
 
-def write_json(identities: Sequence[Identity], stream: TextIO) -> None:
-    json.dump([to_dict(i) for i in identities], stream, indent=2, ensure_ascii=False)
+def write_json(groups: Sequence[Group], stream: TextIO) -> None:
+    data: list[dict[str, Any]]
+    if _is_grouped(groups):
+        data = [
+            {
+                "group": group.key,
+                "emails": len(group.identities),
+                "commits": group.commit_count,
+                "identities": [to_dict(i) for i in group.identities],
+            }
+            for group in groups
+        ]
+    else:
+        data = [to_dict(i) for group in groups for i in group.identities]
+    json.dump(data, stream, indent=2, ensure_ascii=False)
     stream.write("\n")
 
 
-CSV_COLUMNS = ("email", "name", "names", "roles", "commits", "first_seen", "last_seen")
+CSV_COLUMNS = (
+    "email",
+    "name",
+    "names",
+    "domain",
+    "roles",
+    "commits",
+    "first_seen",
+    "last_seen",
+)
 
 
-def write_csv(identities: Sequence[Identity], stream: TextIO) -> None:
-    writer = csv.DictWriter(stream, fieldnames=CSV_COLUMNS, lineterminator="\n")
+def write_csv(groups: Sequence[Group], stream: TextIO) -> None:
+    grouped = _is_grouped(groups)
+    columns = ("group", *CSV_COLUMNS) if grouped else CSV_COLUMNS
+    writer = csv.DictWriter(stream, fieldnames=columns, lineterminator="\n")
     writer.writeheader()
-    for identity in identities:
-        row = to_dict(identity)
-        row["names"] = "; ".join(row["names"])
-        row["roles"] = "; ".join(row["roles"])
-        writer.writerow(row)
+    for group in groups:
+        for identity in group.identities:
+            row = to_dict(identity)
+            row["names"] = "; ".join(row["names"])
+            row["roles"] = "; ".join(row["roles"])
+            if grouped:
+                row["group"] = group.key
+            writer.writerow(row)
 
 
-def write_txt(identities: Sequence[Identity], stream: TextIO) -> None:
-    for identity in identities:
-        stream.write(f"{identity.email}\t{identity.name}\n")
+def write_txt(groups: Sequence[Group], stream: TextIO) -> None:
+    grouped = _is_grouped(groups)
+    for index, group in enumerate(groups):
+        if grouped:
+            if index:
+                stream.write("\n")
+            stream.write(f"# {group.key} ({_summary(group)})\n")
+        for identity in group.identities:
+            stream.write(f"{identity.email}\t{identity.name}\n")
 
 
-def write_table(identities: Sequence[Identity], stream: TextIO) -> None:
-    table = Table(title=f"{len(identities)} email(s) found", title_justify="left")
+def _table(group: Group, title: str) -> Table:
+    table = Table(title=title, title_justify="left")
     table.add_column("Email", style="cyan", no_wrap=True)
     table.add_column("Name")
     table.add_column("Roles", style="magenta")
     table.add_column("Commits", justify="right", style="green", no_wrap=True)
     table.add_column("Last seen", style="dim", no_wrap=True)
-    for identity in identities:
+    for identity in group.identities:
         table.add_row(
             identity.email,
             ", ".join(sorted(identity.names, key=lambda n: -identity.names[n])),
@@ -79,7 +126,19 @@ def write_table(identities: Sequence[Identity], stream: TextIO) -> None:
             str(identity.commit_count),
             identity.last_seen.date().isoformat() if identity.last_seen else "",
         )
-    Console(file=stream, soft_wrap=False).print(table)
+    return table
+
+
+def write_table(groups: Sequence[Group], stream: TextIO) -> None:
+    console = Console(file=stream, soft_wrap=False)
+    total = sum(len(g.identities) for g in groups)
+    if not _is_grouped(groups):
+        console.print(_table(groups[0], f"{total} email(s) found"))
+        return
+    console.print(f"[bold]{total} email(s) in {len(groups)} group(s)[/]")
+    for group in groups:
+        console.print()
+        console.print(_table(group, f"[bold]{group.key}[/] - {_summary(group)}"))
 
 
 FORMATTERS: dict[OutputFormat, Formatter] = {
@@ -90,5 +149,5 @@ FORMATTERS: dict[OutputFormat, Formatter] = {
 }
 
 
-def render(identities: Sequence[Identity], fmt: OutputFormat, stream: TextIO) -> None:
-    FORMATTERS[fmt](identities, stream)
+def render(groups: Sequence[Group], fmt: OutputFormat, stream: TextIO) -> None:
+    FORMATTERS[fmt](groups, stream)

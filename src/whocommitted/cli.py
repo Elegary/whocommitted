@@ -11,9 +11,10 @@ from rich.console import Console
 
 from whocommitted import __version__
 from whocommitted.errors import WhocommittedError
-from whocommitted.extractor import SortKey, extract, sort_identities
+from whocommitted.extractor import extract
 from whocommitted.filters import apply_filters, build_filters
 from whocommitted.git import GitClient
+from whocommitted.ordering import GroupBy, SortKey, group_identities, sort_identities
 from whocommitted.output import OutputFormat, render
 from whocommitted.providers import PROVIDERS, resolve
 
@@ -57,8 +58,27 @@ def extract_cmd(
         typer.Option("--output", "-o", dir_okay=False, writable=True, help="Write to file."),
     ] = None,
     sort: Annotated[
-        SortKey, typer.Option("--sort", "-s", case_sensitive=False, help="Sort order.")
-    ] = SortKey.EMAIL,
+        list[SortKey] | None,
+        typer.Option(
+            "--sort",
+            "-s",
+            case_sensitive=False,
+            help="Sort key, repeatable (first = primary). "
+            "commits/last-seen sort descending, others ascending. [default: email]",
+        ),
+    ] = None,
+    reverse: Annotated[
+        bool, typer.Option("--reverse", "-r", help="Reverse the sort order.")
+    ] = False,
+    group_by: Annotated[
+        GroupBy,
+        typer.Option(
+            "--group-by",
+            "-g",
+            case_sensitive=False,
+            help="Group results by email domain or kind (bot, noreply, personal, organization).",
+        ),
+    ] = GroupBy.NONE,
     include_pulls: Annotated[
         bool,
         typer.Option("--include-pulls", help="Also scan pull request heads (GitHub refs/pull/*)."),
@@ -85,13 +105,15 @@ def extract_cmd(
         raise typer.Exit(exc.exit_code) from exc
 
     filters = build_filters(no_noreply=no_noreply, no_bots=no_bots, domains=domains or ())
-    identities = sort_identities(apply_filters(identities, filters), sort)
+    keys = sort or [SortKey.EMAIL]
+    identities = sort_identities(apply_filters(identities, filters), keys, reverse=reverse)
+    groups = group_identities(identities, group_by, keys, reverse=reverse)
 
     if output is None:
-        render(identities, fmt, sys.stdout)
+        render(groups, fmt, sys.stdout)
     else:
         with output.open("w", encoding="utf-8", newline="") as stream:
-            render(identities, fmt, stream)
+            render(groups, fmt, stream)
         err.print(f"[green]{len(identities)} email(s) written to {output}[/]", highlight=False)
 
 

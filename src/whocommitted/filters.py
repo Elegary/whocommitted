@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Iterable
+from enum import StrEnum
 
 from whocommitted.models import Identity
 
@@ -26,8 +27,66 @@ def is_bot(identity: Identity) -> bool:
 
 
 def has_domain(identity: Identity, domains: Iterable[str]) -> bool:
-    domain = identity.email.rpartition("@")[2]
+    domain = identity.domain
     return any(domain == d or domain.endswith(f".{d}") for d in domains)
+
+
+PERSONAL_DOMAINS = frozenset(
+    {
+        "gmail.com",
+        "googlemail.com",
+        "outlook.com",
+        "hotmail.com",
+        "live.com",
+        "msn.com",
+        "yahoo.com",
+        "icloud.com",
+        "me.com",
+        "mac.com",
+        "aol.com",
+        "proton.me",
+        "protonmail.com",
+        "pm.me",
+        "gmx.com",
+        "gmx.de",
+        "gmx.net",
+        "web.de",
+        "mail.ru",
+        "yandex.ru",
+        "yandex.com",
+        "qq.com",
+        "163.com",
+        "126.com",
+        "fastmail.com",
+        "hey.com",
+        "zoho.com",
+        "tutanota.com",
+        "free.fr",
+        "orange.fr",
+        "laposte.net",
+        "wp.pl",
+        "o2.pl",
+        "interia.pl",
+    }
+)
+
+
+class Kind(StrEnum):
+    BOT = "bot"
+    NOREPLY = "noreply"
+    PERSONAL = "personal"
+    ORGANIZATION = "organization"
+
+
+def classify(identity: Identity) -> Kind:
+    """Coarse category of an address: bot, noreply, webmail or own domain."""
+    if is_bot(identity):
+        return Kind.BOT
+    if is_noreply(identity):
+        return Kind.NOREPLY
+    if identity.domain in PERSONAL_DOMAINS:
+        return Kind.PERSONAL
+    return Kind.ORGANIZATION
 
 
 def build_filters(
