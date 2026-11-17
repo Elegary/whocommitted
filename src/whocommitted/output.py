@@ -14,6 +14,7 @@ from typing import Any, TextIO
 
 from rich.console import Console
 from rich.table import Table
+from rich.text import Text
 
 from whocommitted.models import Identity, Role
 from whocommitted.ordering import Group
@@ -111,7 +112,15 @@ def write_txt(groups: Sequence[Group], stream: TextIO) -> None:
             stream.write(f"{identity.email}\t{identity.name}\n")
 
 
-def _table(group: Group, title: str) -> Table:
+def _name_cell(identity: Identity) -> Text:
+    """Main name, plus the number of other spellings used with this email."""
+    cell = Text(identity.name)
+    if len(identity.names) > 1:
+        cell.append(f" (+{len(identity.names) - 1})", style="dim")
+    return cell
+
+
+def _table(group: Group, title: Text) -> Table:
     table = Table(title=title, title_justify="left")
     table.add_column("Email", style="cyan", no_wrap=True)
     table.add_column("Name")
@@ -119,9 +128,10 @@ def _table(group: Group, title: str) -> Table:
     table.add_column("Commits", justify="right", style="green", no_wrap=True)
     table.add_column("Last seen", style="dim", no_wrap=True)
     for identity in group.identities:
+        # Text instances are never parsed as markup: "dependabot[bot]" must stay intact.
         table.add_row(
-            identity.email,
-            ", ".join(sorted(identity.names, key=lambda n: -identity.names[n])),
+            Text(identity.email),
+            _name_cell(identity),
             ", ".join(_roles(identity)),
             str(identity.commit_count),
             identity.last_seen.date().isoformat() if identity.last_seen else "",
@@ -133,12 +143,13 @@ def write_table(groups: Sequence[Group], stream: TextIO) -> None:
     console = Console(file=stream, soft_wrap=False)
     total = sum(len(g.identities) for g in groups)
     if not _is_grouped(groups):
-        console.print(_table(groups[0], f"{total} email(s) found"))
+        console.print(_table(groups[0], Text(f"{total} email(s) found")))
         return
     console.print(f"[bold]{total} email(s) in {len(groups)} group(s)[/]")
     for group in groups:
         console.print()
-        console.print(_table(group, f"[bold]{group.key}[/] - {_summary(group)}"))
+        title = Text.assemble((group.key or "", "bold"), f" - {_summary(group)}")
+        console.print(_table(group, title))
 
 
 FORMATTERS: dict[OutputFormat, Formatter] = {

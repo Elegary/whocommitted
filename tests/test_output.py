@@ -107,3 +107,14 @@ def test_grouped_table(groups: list[Group]) -> None:
     out = run_groups(groups, OutputFormat.TABLE)
     assert "3 email(s) in 2 group(s)" in out
     assert "y.io - 1 email(s), 1 commit(s)" in out
+
+
+def test_table_keeps_brackets_and_summarises_names() -> None:
+    bot = Identity(
+        email="d[bot]@x.io",
+        names={"dependabot[bot]": 3, "dependabot": 1, "Dependabot": 1},
+    )
+    out = run_groups([Group("[x]", [bot])], OutputFormat.TABLE)
+    assert "d[bot]@x.io" in out
+    assert "dependabot[bot] (+2)" in out
+    assert "[x] - 1 email(s)" in out
