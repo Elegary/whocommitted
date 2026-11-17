@@ -1,0 +1,69 @@
+[project]
+name = "whocommitted"
+version = "0.1.0"
+description = "Extract every email address that committed to a git repository (all branches)"
+readme = "README.md"
+authors = [
+    { name = "Elegary", email = "21334807+Elegary@users.noreply.github.com" }
+]
+requires-python = ">=3.11"
+license = "MIT"
+keywords = ["git", "github", "email", "osint", "cli"]
+classifiers = [
+    "Environment :: Console",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Version Control :: Git",
+]
+dependencies = [
+    "rich>=15.0.0",
+    "typer>=0.29.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.1",
+    "pre-commit>=4.7.0",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.5",
+]
+
+[project.scripts]
+whocommitted = "whocommitted.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/whocommitted"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "RUF", "PT", "S", "N", "PL", "PTH", "RET", "TRY"]
+ignore = ["TRY003", "PLR0913", "PLR0917", "PLR2004"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S603", "S607", "PLR2004"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+testpaths = ["tests"]
+markers = ["network: tests requiring internet access (deselect with -m 'not network')"]
+
+[tool.coverage.run]
+source = ["whocommitted"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
