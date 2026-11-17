@@ -167,6 +167,40 @@ Commit metadata is public, but email addresses are personal data.
 Use whocommitted for legitimate purposes (auditing your own projects, attributing contributions,
 security research) and respect applicable privacy laws such as the GDPR. Do not use it for spam.
 
+## Protect yourself
+
+**How do I see what I'm exposing?**
+Run whocommitted on your own repositories: `whocommitted extract you/repo --include-pulls`,
+or `scripts/owner-emails.sh you` for all of them at once.
+
+**How do I stop exposing my email?**
+On GitHub, go to *Settings → Emails*, enable *Keep my email addresses private* and
+*Block command line pushes that expose my email*, then commit with your noreply address:
+
+```bash
+git config --global user.email "12345678+you@users.noreply.github.com"
+```
+
+GitLab has the same option: *Preferences → Profile → Commit email → Use a private commit email*.
+
+**Can I remove my email from past commits?**
+Yes, with [git-filter-repo](https://github.com/newren/git-filter-repo), followed by a force push:
+
+```bash
+echo 'Me <12345678+you@users.noreply.github.com> <me@personal.com>' > ../mailmap
+git filter-repo --mailmap ../mailmap
+```
+
+This changes every commit hash. It also can't clean forks, GitHub pull request refs or archives
+that already copied the history. It is worth it for personal repositories; on popular ones, consider
+the address exposed. For sensitive leaks, contact GitHub Support.
+
+**Does `.mailmap` hide my email?**
+No. It only changes how names are displayed; the original address stays in every commit.
+
+**Anything else that leaks it?**
+`Co-authored-by:` trailers expose your co-authors' emails, and public GPG keys contain your email.
+
 ## Contributing
 
 ```bash
