@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**Find every email address that ever committed to a git repository**, on all branches and tags, in a few seconds.
+**Find the email address and name of everyone who ever committed to a git repository**, on all branches and tags, in a few seconds.
 
 ![whocommitted demo](docs/demo.gif)
 
@@ -136,7 +136,7 @@ whocommitted extract https://gitlab.com/gitlab-org/cli --domain gitlab.com --sor
 whocommitted extract astral-sh/uv --group-by domain --sort commits --no-bots --no-noreply
 ```
 
-**Feed other tools.** Plain email list, JSON or CSV:
+**Feed other tools.** Plain email list, or emails and names in JSON or CSV:
 
 ```bash
 whocommitted extract pallets/click -f json --sort commits | jq -r '.[].email'
@@ -163,7 +163,7 @@ Private repositories work with your usual git credentials (SSH key or credential
 
 ## Responsible use
 
-Commit metadata is public, but email addresses are personal data.
+Commit metadata is public, but email addresses and names are personal data.
 Use whocommitted for legitimate purposes (auditing your own projects, attributing contributions,
 security research) and respect applicable privacy laws such as the GDPR. Do not use it for spam.
 
