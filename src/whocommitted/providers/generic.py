@@ -10,7 +10,7 @@ from whocommitted.providers.base import Provider
 
 _URL_RE = re.compile(r"^(?:https?|ssh|git|file)://\S+$", re.IGNORECASE)
 _SCP_RE = re.compile(r"^[\w.-]+@[\w.-]+:\S+$")
-_LOCAL_PREFIXES = ("/", "./", "../", "~")
+LOCAL_PREFIXES = ("/", "./", "../", "~")
 
 
 class GenericGitProvider(Provider):
@@ -20,7 +20,7 @@ class GenericGitProvider(Provider):
     def parse(self, spec: str) -> RepoRef | None:
         if _URL_RE.match(spec) or _SCP_RE.match(spec):
             return RepoRef(provider=self.name, clone_url=spec)
-        if spec.startswith(_LOCAL_PREFIXES):
+        if spec.startswith(LOCAL_PREFIXES):
             path = Path(spec).expanduser().resolve()
             return RepoRef(provider=self.name, clone_url=path.as_uri())
         return None

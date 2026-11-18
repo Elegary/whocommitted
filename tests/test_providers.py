@@ -88,6 +88,17 @@ def test_local_path(tmp_path: Path) -> None:
     assert ref.clone_url == tmp_path.resolve().as_uri()
 
 
+@pytest.mark.parametrize("prefix", ["./", "../"])
+def test_relative_local_path_is_not_shorthand(
+    prefix: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "sub").mkdir()
+    monkeypatch.chdir(tmp_path / "sub")
+    ref = resolve(f"{prefix}repo")
+    assert ref.provider == "git"
+    assert ref.clone_url == (tmp_path / "sub" / prefix / "repo").resolve().as_uri()
+
+
 def test_git_prefix() -> None:
     assert resolve("git:https://example.org/r.git").clone_url == "https://example.org/r.git"
     assert resolve("git:anything").clone_url == "anything"

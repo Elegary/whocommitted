@@ -18,7 +18,7 @@ import re
 from whocommitted.errors import InvalidRepoSpecError
 from whocommitted.models import RepoRef
 from whocommitted.providers.base import HostedProvider, Provider
-from whocommitted.providers.generic import GenericGitProvider
+from whocommitted.providers.generic import LOCAL_PREFIXES, GenericGitProvider
 from whocommitted.providers.github import GitHubProvider
 
 PROVIDERS: tuple[Provider, ...] = (GitHubProvider(), GenericGitProvider())
@@ -51,7 +51,8 @@ def resolve(spec: str, default: str = DEFAULT_PROVIDER) -> RepoRef:
             if ref is not None:
                 return ref
 
-    if _SHORTHAND_RE.match(spec):
+    # ./repo and ../repo also look like owner/repo shorthand.
+    if _SHORTHAND_RE.match(spec) and not spec.startswith(LOCAL_PREFIXES):
         return get_provider(default).from_path(spec)
 
     for provider in PROVIDERS:
