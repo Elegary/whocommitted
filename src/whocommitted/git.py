@@ -66,7 +66,7 @@ class GitClient:
     def clone_bare(self, url: str, dest: Path) -> None:
         """Clone every branch and tag without downloading file contents."""
         try:
-            self.run(["clone", "--bare", "--quiet", "--filter=blob:none", url, str(dest)])
+            self.run(["clone", "--bare", "--quiet", "--filter=blob:none", "--", url, str(dest)])
         except GitCommandError as exc:
             if any(hint in str(exc) for hint in _AUTH_HINTS):
                 raise GitCommandError(

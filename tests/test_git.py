@@ -76,6 +76,21 @@ def test_clone_auth_error_is_explained(
         GitClient().clone_bare("https://github.com/x/y.git", tmp_path / "d")
 
 
+def test_clone_url_is_never_read_as_an_option(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    GitClient().clone_bare("--upload-pack=x", tmp_path / "d")
+    args = calls[0]
+    assert args.index("--") == args.index("--upload-pack=x") - 1
+
+
 def test_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run(*_args: object, **_kwargs: object) -> None:
         raise subprocess.TimeoutExpired("git", 1)

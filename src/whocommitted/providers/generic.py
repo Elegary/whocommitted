@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from whocommitted.errors import InvalidRepoSpecError
 from whocommitted.models import RepoRef
 from whocommitted.providers.base import Provider
 
@@ -26,6 +27,9 @@ class GenericGitProvider(Provider):
         return None
 
     def from_path(self, path: str) -> RepoRef:
+        if path.startswith("-"):
+            # Would be read by git as an option (e.g. --upload-pack=<command>).
+            raise InvalidRepoSpecError(f"invalid repository {path!r}")
         ref = self.parse(path)
         if ref is None:
             ref = RepoRef(provider=self.name, clone_url=path)

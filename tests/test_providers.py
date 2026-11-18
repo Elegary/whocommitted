@@ -99,6 +99,12 @@ def test_relative_local_path_is_not_shorthand(
     assert ref.clone_url == (tmp_path / "sub" / prefix / "repo").resolve().as_uri()
 
 
+@pytest.mark.parametrize("spec", ["git:--upload-pack=touch /tmp/x", "git:-u x"])
+def test_option_like_spec_is_rejected(spec: str) -> None:
+    with pytest.raises(InvalidRepoSpecError):
+        resolve(spec)
+
+
 def test_git_prefix() -> None:
     assert resolve("git:https://example.org/r.git").clone_url == "https://example.org/r.git"
     assert resolve("git:anything").clone_url == "anything"
