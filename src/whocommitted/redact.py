@@ -11,7 +11,7 @@ MASK = "*****"
 
 
 def redact_email(email: str) -> str:
-    """``dana.lane@example.com`` -> ``d*****e@example.com``; the domain is kept."""
+    """``jane.doe@example.com`` -> ``j*****e@example.com``; the domain is kept."""
     local, at, domain = email.rpartition("@")
     if not at:
         local, domain = email, ""
@@ -20,7 +20,7 @@ def redact_email(email: str) -> str:
 
 
 def redact_name(name: str) -> str:
-    """``Dana Lane`` -> ``D. L.``"""
+    """``Jane Doe`` -> ``J. D.``"""
     return " ".join(f"{word[0]}." for word in name.split())
 
 
